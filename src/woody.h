@@ -55,7 +55,6 @@ int		free_all();
 void  read_original_elf(char *filename);
 void	M(size_t offset, size_t c);
 void	file_out_to_file(const char*, const char*, uint32_t);
-void	hex_dump(void* address, size_t amount);
 int		ft_stridentical(const char *s1, const char *s2);
 
 # define bool char
