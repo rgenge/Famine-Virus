@@ -30,35 +30,30 @@ void elf_init(char *vict, elf_t **elf_ptr)
 	}
 }
 
-void get_files_list(const char *directory_path)
+void get_files_list(char *directory_path, char *file_array[MAX_FILES], int *files_count)
 {
 	struct dirent *entry;
 	DIR *dir = opendir(directory_path);
-	___die2(dir == NULL,"Could not open directory");
-	char *file_array[MAX_FILES];
-	int fileCount = 0;
+	___die2(dir == NULL, "Could not open directory");
+	char full_path[100];
 
-	while ((entry = readdir(dir)) != NULL && fileCount < MAX_FILES)
+	while ((entry = readdir(dir)) != NULL && (*files_count) < MAX_FILES)
 	{
 		if (entry->d_type == DT_REG)
 		{
-			file_array[fileCount] = malloc(MAX_FILENAME);
-			if (file_array[fileCount] != NULL)
+			file_array[(*files_count)] = malloc(MAX_FILENAME);
+			if (file_array[(*files_count)] != NULL)
 			{
-				ft_memcpy(file_array[fileCount], entry->d_name, MAX_FILENAME);
-				file_array[fileCount][MAX_FILENAME - 1] = '\0';
-				fileCount++;
+				strcpy(full_path, directory_path);
+				strcat(full_path, "/");
+				strcat(full_path, entry->d_name);
+				ft_memcpy(file_array[(*files_count)], full_path, MAX_FILENAME);
+				file_array[(*files_count)][MAX_FILENAME - 1] = '\0';
+				(*files_count)++;
 			}
 		}
 	}
 	closedir(dir);
-	// Print the list of files
-	printf("Files in directory %s:\n", directory_path);
-	for (int i = 0; i < fileCount; i++)
-	{
-		printf("%s\n", file_array[i]);
-		free(file_array[i]);
-	}
 }
 
 void inject(const char *woody)
@@ -66,12 +61,19 @@ void inject(const char *woody)
 	printf("%s", woody);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
-	___die(argc != 2, "Usage: `woody_woodpacker binary_file`");
-	const char *directory_path = "./tmp";
-	get_files_list(directory_path);
-	elf_init(argv[1], &elf);
+	char *file_array[MAX_FILES];
+	char *directory_path = "./tmp";
+	int files_count = 0;
+	get_files_list(directory_path, file_array, &files_count);
+	for (int i = 0; i < files_count; i++)
+	{
+		printf("%s\n", file_array[i]);
+		elf_init(file_array[i], &elf);
+		free(file_array[i]);
+	}
+//	elf_init(argv[1], &elf);
 	//	inject("woody");
 	return free_all();
 }

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <elf.h>
 #include <dirent.h>
+#include <string.h>
 
 #define __debug false
 #define MAX_FILES 100
