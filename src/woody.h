@@ -54,7 +54,7 @@ typedef struct injection
 } injector;
 
 off_t get_filesize(int fd);
-void read_original(char *filename, elf_t **);
+int read_original(char *filename, elf_t **);
 void *ft_memcpy(void *dst, const void *src, size_t n);
 void validate_file();
 int free_all();
@@ -69,15 +69,12 @@ int ft_stridentical(const char *s1, const char *s2);
 #define ___die(_bool, _msg) \
 	if (_bool)              \
 	die(_msg)
-#define ___die2(_bool, _msg)           \
-	if (_bool)                         \
-	{                                  \
-		fprintf(stderr, "%s\n", _msg); \
-		exit(1);                       \
-	}
+#define ___die2(_bool, _msg) \
+	if (_bool)               \
+	return die2(_msg)
 
 void die(char *message);
-
+int die2(char *message);
 #define _E32 elf->ehdr._32
 #define _P32 elf->phdr._32
 #define _S32 elf->shdr._32
