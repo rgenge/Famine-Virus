@@ -11,7 +11,7 @@
 #include <string.h>
 
 #define __debug false
-#define MAX_FILES 100
+#define MAX_FILES 10
 #define MAX_FILENAME 100
 #ifndef FUN
 #define FUN 1
@@ -56,12 +56,9 @@ typedef struct injection
 off_t get_filesize(int fd);
 int read_original(char *filename, elf_t **);
 void *ft_memcpy(void *dst, const void *src, size_t n);
-void validate_file();
 int free_all();
 void read_original_elf(char *filename);
 void M(size_t offset, size_t c);
-void file_out_to_file(const char *, const char *, uint32_t);
-int ft_stridentical(const char *s1, const char *s2);
 
 #define bool char
 #define false 0

