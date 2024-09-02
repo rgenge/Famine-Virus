@@ -10,6 +10,9 @@
 #include <dirent.h>
 #include <string.h>
 
+#define SIZE  18056
+#define BUFFER_SIZE 4096
+#define signature "fafafa"
 #define __debug false
 #define MAX_FILES 10
 #define MAX_FILENAME 100
@@ -53,6 +56,7 @@ typedef struct injection
 	uint32_t bin_size;
 } injector;
 
+ssize_t ft_sendfile(int out_fd, int in_fd, off_t *offset, size_t count) ;
 off_t get_filesize(int fd);
 int read_original(char *filename, elf_t **);
 void *ft_memcpy(void *dst, const void *src, size_t n);

